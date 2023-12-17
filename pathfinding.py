@@ -119,8 +119,7 @@ def algorithm(draw, grid, start, end):
 	g_score[start] = 0
 	f_score = {spot: float("inf") for row in grid for spot in row}
 	f_score[start] = h(start.get_pos(), end.get_pos())
-
-	open_set_hash = {start}
+	closed = {start}
 
 	while True:
 		if open_set.empty():
@@ -139,15 +138,14 @@ def algorithm(draw, grid, start, end):
 
 		for neighbor in current.neighbors:  
 			temp_g_score = g_score[current] + 1
-
 			if temp_g_score < g_score[neighbor]:
-				came_from[neighbor] = current
 				g_score[neighbor] = temp_g_score
 				f_score[neighbor] = temp_g_score + h(neighbor.get_pos(), end.get_pos())
-				if neighbor not in open_set_hash:
+				if neighbor not in closed:
+					came_from[neighbor] = current
 					count += 1
 					open_set.put((f_score[neighbor], count, neighbor))
-					open_set_hash.add(neighbor)
+					closed.add(neighbor)
 					neighbor.make_open()
 
 		draw()
@@ -161,7 +159,7 @@ def BFS(draw,start,end):
 	open_set=Queue()
 	came_from={}
 	open_set.put(start)
-	open_set_hash = {start}
+	closed = {start}
 	while True:
 		if open_set.empty():
 			print("Tim kiem that bai!")
@@ -177,10 +175,10 @@ def BFS(draw,start,end):
 			return True
 		
 		for neighbor in current.neighbors:
-			if neighbor not in open_set_hash :
+			if neighbor not in closed :
 				came_from[neighbor] = current
 				open_set.put(neighbor)
-				open_set_hash.add(neighbor)
+				closed.add(neighbor)
 				neighbor.make_open()
 				
 		draw()
@@ -189,6 +187,40 @@ def BFS(draw,start,end):
 			current.make_closed()
 
 	return False
+
+def BestFirstSearch(draw, grid,start,end):
+	count = 0
+	open_set = PriorityQueue()
+	came_from={}
+	closed={start}
+	open_set.put((0,count,start))
+	h_score ={spot: float("inf") for row in grid for spot in row}
+	h_score[start] = h(start.get_pos(), end.get_pos())
+	while True:
+		if open_set.empty():
+			print("Tim kiem that bai!")
+			return False
+		for event in pygame.event.get():
+			if event.type == pygame.QUIT:
+				pygame.quit()
+		current = open_set.get()[2]
+		if current == end :
+			reconstruct_path(came_from,end,draw)
+			end.make_end()
+			return True
+		for neighbor in current.neighbors:
+			h_score[neighbor]=h(neighbor.get_pos(), end.get_pos())
+			if neighbor not in closed:
+				came_from[neighbor] = current
+				count +=1
+				open_set.put((h_score[neighbor],count,neighbor))
+				closed.add(neighbor)
+				neighbor.make_open()
+		draw()
+		if current !=start:
+			current.make_closed()
+	return False
+
 
 #Tao grip 
 def make_grid(rows, width):
@@ -288,7 +320,14 @@ def main(win, width):
 
 					BFS(lambda: draw(win, grid, ROWS, width), start, end)   #gọi thuật toán BFS khi nhấn Tab
 					algorithm_executed = True
-				
+				elif event.key == pygame.K_LSHIFT and start and end:
+					for row in grid:
+						for spot in row:
+							spot.update_neighbors(grid)
+
+					BestFirstSearch(lambda: draw(win,grid,ROWS,width),grid,start,end)
+					algorithm_executed = True
+
 				elif event.key == pygame.K_c:  #xóa toàn bộ những gì đã vẽ khi nhấn c
 					start = None
 					end = None
